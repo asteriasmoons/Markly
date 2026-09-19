@@ -2,8 +2,6 @@
 //  ContentView.swift
 //  Markly
 //
-//  Created by Asteria Moon on 6/7/26.
-//
 
 import SwiftUI
 import SwiftData

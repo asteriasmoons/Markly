@@ -208,34 +208,31 @@ private extension PinCollectionView {
     }
 
     var searchCard: some View {
-        GlassCard {
-            HStack(spacing: 10) {
-                Image("searchsparkle")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(LColors.secondaryAccent)
+        HStack(spacing: 10) {
+            Image("searchsparkle")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .foregroundStyle(LColors.secondaryAccent)
 
-                TextField("Search this collection", text: $searchText)
-                    .foregroundStyle(LColors.textPrimary)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .tint(LColors.secondaryAccent)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .fill(Color.white.opacity(0.035))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .strokeBorder(LColors.secondaryAccent, lineWidth: 1.2)
-            )
+            TextField("Search this collection", text: $searchText)
+                .foregroundStyle(LColors.textPrimary)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .tint(LColors.secondaryAccent)
         }
-        .collectionDetailBorder(LColors.secondaryAccent)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .strokeBorder(LColors.secondaryAccent, lineWidth: 1.2)
+        )
     }
 
     var pinsSection: some View {
@@ -247,7 +244,7 @@ private extension PinCollectionView {
 
                 Text("\(filteredCollectionBookmarks.count)")
                     .font(.system(size: 13, weight: .black, design: .rounded))
-                    .foregroundStyle(LColors.textSecondary)
+                    .foregroundStyle(LColors.indicators)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.white.opacity(0.07), in: Capsule())
@@ -284,12 +281,14 @@ private extension PinCollectionView {
     var emptyStateCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
-                Image("starmark")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
+                BubblyIconMaterial(tint: LColors.indicators)
+                    .mask {
+                        Image("starmark")
+                            .resizable()
+                            .scaledToFit()
+                    }
                     .frame(width: 30, height: 30)
-                    .foregroundStyle(LColors.indicators)
+                    .accessibilityHidden(true)
 
                 Text(collectionBookmarks.isEmpty ? "No pins in this collection" : "No matching pins")
                     .font(.system(size: 20, weight: .black, design: .rounded))
@@ -545,7 +544,7 @@ private extension PinCollectionView {
                 .resizable()
                 .scaledToFit()
                 .frame(width: icon == "pinfill" ? 21 : 17, height: icon == "pinfill" ? 21 : 17)
-                .foregroundStyle(LColors.secondaryAccent)
+                .foregroundStyle(LColors.indicators)
 
             Text(title)
                 .font(.system(size: 18, weight: .black, design: .rounded))

@@ -4,13 +4,22 @@
 //
 
 import SwiftUI
+import SwiftData
 import UIKit
 
 struct SubmittedReportDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     let report: SubmittedReport
     @State private var selectedAttachment: SubmittedReportAttachment?
+    @State private var showConversation = false
+    @State private var conversationState: MarklyReportConversationState
+    @State private var conversationUnreadCount: Int
+    @State private var didHandleInitialConversationOpen = false
+    @StateObject private var conversationService = MarklyReportConversationService()
 
+    let openConversationOnAppear: Bool
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
@@ -19,6 +28,13 @@ struct SubmittedReportDetailView: View {
     private let attachmentColumns = [
         GridItem(.adaptive(minimum: 112, maximum: 112), spacing: 12)
     ]
+
+    init(report: SubmittedReport, openConversationOnAppear: Bool = false) {
+        self.report = report
+        self.openConversationOnAppear = openConversationOnAppear
+        _conversationState = State(initialValue: report.conversationState)
+        _conversationUnreadCount = State(initialValue: report.conversationUnreadCount)
+    }
 
     var body: some View {
         ZStack {
@@ -37,6 +53,13 @@ struct SubmittedReportDetailView: View {
                         dismiss()
                     }
 
+                    ReportConversationButton(
+                        state: conversationState,
+                        unreadCount: conversationUnreadCount
+                    ) {
+                        showConversation = true
+                    }
+
                     reportDetails
                     attachmentsSection
                 }
@@ -52,6 +75,42 @@ struct SubmittedReportDetailView: View {
         .adaptiveSheet(item: $selectedAttachment) { attachment in
             SubmittedReportImageView(attachment: attachment)
         }
+        .adaptiveSheet(isPresented: $showConversation, onDismiss: {
+            refreshConversationSummary()
+        }) {
+            ReportConversationView(report: report)
+        }
+        .task {
+            await refreshConversationSummaryAsync()
+            openInitialConversationIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: MarklyReportConversationNotificationManager.conversationDataDidChange
+        )) { _ in
+            refreshConversationSummary()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshConversationSummary()
+        }
+    }
+
+    private func refreshConversationSummary() {
+        Task {
+            await refreshConversationSummaryAsync()
+        }
+    }
+
+    private func refreshConversationSummaryAsync() async {
+        let summary = await conversationService.fetchSummary(for: report, modelContext: modelContext)
+        conversationState = summary.state
+        conversationUnreadCount = summary.reporterUnreadCount
+    }
+
+    private func openInitialConversationIfNeeded() {
+        guard openConversationOnAppear, !didHandleInitialConversationOpen else { return }
+        didHandleInitialConversationOpen = true
+        showConversation = true
     }
 
     @ViewBuilder

@@ -1,6 +1,6 @@
 //
 //  SharedFolderStore.swift
-//  Lystaria
+//  Markly
 //
 
 import Foundation

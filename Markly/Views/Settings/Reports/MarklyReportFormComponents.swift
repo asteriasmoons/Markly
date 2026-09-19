@@ -431,6 +431,10 @@ struct MarklyReportErrorCard: View {
                 .foregroundStyle(LColors.danger)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(LColors.primaryActions, lineWidth: 1.2)
+        }
     }
 }
 

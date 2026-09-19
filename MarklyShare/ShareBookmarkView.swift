@@ -1,6 +1,6 @@
 //
 //  ShareBookmarkView.swift
-//  Markly
+//  MarklyShare
 //
 
 import SwiftUI

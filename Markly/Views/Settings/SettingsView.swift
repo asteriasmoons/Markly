@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SafariServices
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @State private var showingBetaFeedback = false
     @State private var showingFeatureRequest = false
     @State private var showingSubmittedReports = false
+    @State private var showingPrivacyPolicy = false
+    @State private var showingTermsOfService = false
 
     var body: some View {
         ZStack {
@@ -58,6 +61,22 @@ struct SettingsView: View {
         }
         .adaptiveSheet(isPresented: $showingSubmittedReports) {
             SubmittedReportsView()
+        }
+        .adaptiveSheet(isPresented: $showingPrivacyPolicy) {
+            InAppBrowserView(url: URL(string: "https://docs.voxiverse.ink/privacy/markly")!)
+        }
+        .adaptiveSheet(isPresented: $showingTermsOfService) {
+            InAppBrowserView(url: URL(string: "https://docs.voxiverse.ink/terms/markly")!)
+        }
+        .onAppear {
+            if appState.pendingReportConversationID != nil {
+                showingSubmittedReports = true
+            }
+        }
+        .onChange(of: appState.pendingReportConversationID) { _, newValue in
+            if newValue != nil {
+                showingSubmittedReports = true
+            }
         }
     }
 }
@@ -234,7 +253,7 @@ private extension SettingsView {
                 } label: {
                     SettingsRow(
                         icon: "inboxfill",
-                        title: "Submitted",
+                        title: "Submitted Reports",
                         subtitle: "View reports sent from this device.",
                         accent: settingsAccent(at: supportRowOffset + 3)
                     )
@@ -255,19 +274,29 @@ private extension SettingsView {
                     accent: settingsAccent(at: 3)
                 )
 
-                SettingsRow(
-                    icon: "lovedotlist",
-                    title: "Privacy Policy",
-                    subtitle: "Read how your data is handled.",
-                    accent: settingsAccent(at: legalRowOffset)
-                )
+                Button {
+                    showingPrivacyPolicy = true
+                } label: {
+                    SettingsRow(
+                        icon: "lovedotlist",
+                        title: "Privacy Policy",
+                        subtitle: "Read how your data is handled.",
+                        accent: settingsAccent(at: legalRowOffset)
+                    )
+                }
+                .buttonStyle(.plain)
 
-                SettingsRow(
-                    icon: "lovedotlist",
-                    title: "Terms of Service",
-                    subtitle: "Review the terms of using Markly.",
-                    accent: settingsAccent(at: legalRowOffset + 1)
-                )
+                Button {
+                    showingTermsOfService = true
+                } label: {
+                    SettingsRow(
+                        icon: "lovedotlist",
+                        title: "Terms of Service",
+                        subtitle: "Review the terms of using Markly.",
+                        accent: settingsAccent(at: legalRowOffset + 1)
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
         .settingsSectionAccent(settingsAccent(at: 3))
@@ -392,4 +421,17 @@ private extension View {
                 .strokeBorder(accent, lineWidth: 1.2)
         )
     }
+}
+
+
+// MARK: - In-App Browser
+
+private struct InAppBrowserView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }

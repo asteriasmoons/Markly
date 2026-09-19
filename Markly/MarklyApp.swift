@@ -8,6 +8,7 @@ import SwiftData
 
 @main
 struct MarklyApp: App {
+    @UIApplicationDelegateAdaptor(MarklyNotificationDelegate.self) private var notificationDelegate
     @StateObject private var appState = AppState()
 
     var sharedModelContainer: ModelContainer = {
@@ -21,6 +22,8 @@ struct MarklyApp: App {
             UserSettings.self,
             SubmittedReport.self,
             SubmittedReportAttachment.self,
+            WordDictionary.self,
+            DictionaryWord.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -35,6 +38,15 @@ struct MarklyApp: App {
         WindowGroup {
             MainTabView()
                 .environmentObject(appState)
+                .onOpenURL { url in
+                    appState.handleReportConversationURL(url)
+                }
+                .onReceive(NotificationCenter.default.publisher(
+                    for: MarklyReportConversationNotificationManager.conversationNotificationOpened
+                )) { notification in
+                    guard let reportID = notification.object as? String else { return }
+                    appState.handleReportConversationID(reportID)
+                }
         }
         .modelContainer(sharedModelContainer)
     }

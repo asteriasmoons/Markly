@@ -8,14 +8,19 @@ import SwiftUI
 
 struct SubmittedReportsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var appState: AppState
     @Query(sort: \SubmittedReport.submittedAt, order: .reverse) private var reports: [SubmittedReport]
     @State private var selectedReport: SubmittedReport?
+    @State private var shouldOpenConversationForSelectedReport = false
+    @State private var isRefreshingConversations = false
 
     private let reportGridColumns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
-    private let reportGridCardContentHeight: CGFloat = 144
+    private let reportGridCardContentHeight: CGFloat = 160
     private let reportGridTitleHeight: CGFloat = 18
 
     var body: some View {
@@ -33,6 +38,7 @@ struct SubmittedReportsView: View {
                         LazyVGrid(columns: reportGridColumns, spacing: 12) {
                             ForEach(Array(reports.enumerated()), id: \.element.id) { index, report in
                                 Button {
+                                    shouldOpenConversationForSelectedReport = false
                                     selectedReport = report
                                 } label: {
                                     submittedReportCard(report, accent: accent(for: index))
@@ -52,7 +58,53 @@ struct SubmittedReportsView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .adaptiveSheet(item: $selectedReport) { report in
-            SubmittedReportDetailView(report: report)
+            SubmittedReportDetailView(
+                report: report,
+                openConversationOnAppear: shouldOpenConversationForSelectedReport
+            )
+            .onDisappear {
+                shouldOpenConversationForSelectedReport = false
+            }
+        }
+        .onAppear(perform: openPendingConversationTarget)
+        .onChange(of: appState.pendingReportConversationID) { _, _ in
+            openPendingConversationTarget()
+        }
+        .task(id: reportRefreshKey) {
+            await refreshConversationSummaries()
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: MarklyReportConversationNotificationManager.conversationDataDidChange
+        )) { _ in
+            Task { await refreshConversationSummaries() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await refreshConversationSummaries() }
+        }
+    }
+
+    private func openPendingConversationTarget() {
+        guard let pendingID = appState.pendingReportConversationID else { return }
+        guard let report = reports.first(where: { $0.reportID == pendingID }) else { return }
+        shouldOpenConversationForSelectedReport = true
+        selectedReport = report
+        _ = appState.consumePendingReportConversationID()
+    }
+
+    private var reportRefreshKey: String {
+        reports.map(\.reportID).joined(separator: "|")
+    }
+
+    private func refreshConversationSummaries() async {
+        guard !isRefreshingConversations else { return }
+        guard !reports.isEmpty else { return }
+        isRefreshingConversations = true
+        defer { isRefreshingConversations = false }
+
+        let service = MarklyReportConversationService()
+        for report in reports {
+            _ = await service.fetchSummary(for: report, modelContext: modelContext)
         }
     }
 
@@ -109,7 +161,14 @@ struct SubmittedReportsView: View {
     private func submittedReportCard(_ report: SubmittedReport, accent: Color) -> some View {
         GlassCard(cornerRadius: 22, padding: 11) {
             VStack(alignment: .center, spacing: 8) {
-                liquidGlassReportIcon(name: reportIconName(for: report), accent: accent)
+                ZStack(alignment: .topTrailing) {
+                    liquidGlassReportIcon(name: reportIconName(for: report), accent: accent)
+
+                    if report.conversationState == .invited || report.conversationUnreadCount > 0 {
+                        conversationIndicator(for: report, accent: accent)
+                            .offset(x: 4, y: -4)
+                    }
+                }
 
                 Text(report.title)
                     .font(.system(size: 15, weight: .black, design: .rounded))
@@ -134,6 +193,14 @@ struct SubmittedReportsView: View {
                         .font(.system(size: 11, weight: .black, design: .rounded))
                         .foregroundStyle(accent)
                         .multilineTextAlignment(.center)
+
+                    if report.conversationState != .notStarted {
+                        Text(conversationStatusText(for: report))
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .foregroundStyle(report.conversationState == .declined ? LColors.textSecondary : accent)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                    }
                 }
 
                 HStack(spacing: 12) {
@@ -177,6 +244,38 @@ struct SubmittedReportsView: View {
             return "brightbulb"
         default:
             return "bug"
+        }
+    }
+
+    private func conversationIndicator(for report: SubmittedReport, accent: Color) -> some View {
+        ZStack {
+            Circle()
+                .fill(LColors.background)
+                .frame(width: 22, height: 22)
+
+            Circle()
+                .fill(report.conversationUnreadCount > 0 ? LColors.indicators : accent)
+                .frame(width: 16, height: 16)
+
+            if report.conversationUnreadCount > 0 {
+                Text("\(min(report.conversationUnreadCount, 9))")
+                    .font(.system(size: 9, weight: .black, design: .rounded))
+                    .foregroundStyle(LColors.background)
+            }
+        }
+        .accessibilityLabel(report.conversationUnreadCount > 0 ? "\(report.conversationUnreadCount) unread conversation messages" : "Conversation invitation")
+    }
+
+    private func conversationStatusText(for report: SubmittedReport) -> String {
+        switch report.conversationState {
+        case .notStarted:
+            return ""
+        case .invited:
+            return "Invite waiting"
+        case .accepted:
+            return report.conversationUnreadCount > 0 ? "\(report.conversationUnreadCount) unread" : "Conversation open"
+        case .declined:
+            return "Declined"
         }
     }
 

@@ -84,61 +84,62 @@ private extension AddEditBookmarkFolderView {
     }
 
     var folderDetailsSection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                folderSheetSectionHeader(
-                    title: "Folder Details",
-                    icon: "blankfolder",
-                    accent: folderSheetAccent(at: 0)
-                )
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Folder Name")
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundStyle(folderSheetAccent(at: 0))
 
-                HStack(spacing: 12) {
-                    FolderSheetIconBubble(iconId: selectedIcon, accent: folderSheetAccent(at: 0))
+            GlassTextField(
+                placeholder: "Enter folder name",
+                text: $name
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                    .strokeBorder(folderSheetAccent(at: 0), lineWidth: 1)
+            )
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        label("Folder Icon", accent: folderSheetAccent(at: 0))
-
-                        Text("Pick an icon for this folder.")
-                            .font(.footnote)
-                            .foregroundStyle(LColors.textSecondary)
-                    }
-                }
-
-                label("Folder Name", accent: folderSheetAccent(at: 0))
-
-                GlassTextField(
-                    placeholder: "Enter folder name",
-                    text: $name
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                        .strokeBorder(folderSheetAccent(at: 0), lineWidth: 1)
-                )
-
-                if isInbox {
-                    Text("The Inbox folder cannot be renamed.")
-                        .font(.footnote)
-                        .foregroundStyle(LColors.warning)
-                }
+            if isInbox {
+                Text("The Inbox folder cannot be renamed.")
+                    .font(.footnote)
+                    .foregroundStyle(LColors.warning)
             }
         }
-        .folderSheetSectionAccent(folderSheetAccent(at: 0))
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     var iconLibrarySection: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                folderSheetSectionHeader(
-                    title: "Choose Icon",
-                    icon: "graphicdesign",
-                    accent: folderSheetAccent(at: 1)
-                )
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Choose Icon")
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundStyle(folderSheetAccent(at: 1))
 
-                IconPickerView(selectedIcon: $selectedIcon)
-                    .frame(minHeight: 280)
+            selectedIconPreview
+
+            IconPickerView(
+                selectedIcon: $selectedIcon,
+                iconBorderColor: LColors.secondaryAccent,
+                iconBorderWidth: 1.5,
+                glassDropdown: true
+            )
+                .frame(minHeight: 280)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    var selectedIconPreview: some View {
+        HStack(spacing: 12) {
+            FolderSheetIconBubble(iconId: selectedIcon, accent: folderSheetAccent(at: 1))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Selected Icon")
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .foregroundStyle(folderSheetAccent(at: 1))
+
+                Text("Pick an icon for this folder.")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(LColors.textSecondary)
             }
         }
-        .folderSheetSectionAccent(folderSheetAccent(at: 1))
     }
 
     var actionsSection: some View {

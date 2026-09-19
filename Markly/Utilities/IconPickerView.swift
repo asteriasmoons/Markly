@@ -2,8 +2,6 @@
 //  IconPickerView.swift
 //  Markly
 //
-//  Created by Asteria Moon on 5/14/26.
-//
 
 import SwiftUI
 
@@ -11,6 +9,11 @@ import SwiftUI
 
 struct IconPickerView: View {
     @Binding var selectedIcon: String
+
+    var iconBorderColor: Color? = nil
+    var iconBorderWidth: CGFloat? = nil
+    var glassDropdown: Bool = false
+    var dropdownTint: Color? = nil
 
     @State private var selectedCategoryName: String = IconLibrary.pickerCategories.first?.name ?? ""
     @State private var isCategoryDropdownOpen = false
@@ -77,11 +80,19 @@ struct IconPickerView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(LColors.raisedSurfaces, in: RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous))
+                .background {
+                    if glassDropdown {
+                        BubblyTileSurface(tint: dropdownTint ?? LColors.secondaryAccent, cornerRadius: LSpacing.inputRadius)
+                    } else {
+                        RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                            .fill(LColors.raisedSurfaces)
+                    }
+                }
                 .overlay(
                     RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                        .strokeBorder(LColors.glassBorder, lineWidth: 1)
+                        .strokeBorder(glassDropdown ? (dropdownTint ?? LColors.secondaryAccent) : LColors.glassBorder, lineWidth: glassDropdown ? 1.2 : 1)
                 )
+                .bubblyTileLift(isEnabled: glassDropdown)
             }
             .buttonStyle(.plain)
 
@@ -108,13 +119,15 @@ struct IconPickerView: View {
                                             .resizable()
                                             .scaledToFit()
                                             .frame(width: 14, height: 14)
-                                            .foregroundStyle(LColors.indicators)
+                                            .foregroundStyle(glassDropdown ? LColors.primaryText : LColors.indicators)
                                     }
                                 }
                                 .frame(height: categoryRowHeight)
                                 .padding(.horizontal, 12)
                                 .background(
-                                    selectedCategoryName == category.name ? LColors.indicators.opacity(0.20) : Color.clear,
+                                    selectedCategoryName == category.name
+                                        ? (glassDropdown ? Color.white.opacity(0.08) : LColors.indicators.opacity(0.20))
+                                        : Color.clear,
                                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 )
                             }
@@ -126,11 +139,19 @@ struct IconPickerView: View {
                 .frame(
                     maxHeight: CGFloat(min(maxVisibleCategoryRows, IconLibrary.pickerCategories.count)) * categoryRowHeight + 16
                 )
-                .background(LColors.surfaces, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background {
+                    if glassDropdown {
+                        BubblyTileSurface(tint: dropdownTint ?? LColors.secondaryAccent, cornerRadius: 16)
+                    } else {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(LColors.surfaces)
+                    }
+                }
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(LColors.glassBorder, lineWidth: 1)
+                        .strokeBorder(glassDropdown ? (dropdownTint ?? LColors.secondaryAccent) : LColors.glassBorder, lineWidth: glassDropdown ? 1.2 : 1)
                 )
+                .bubblyTileLift(isEnabled: glassDropdown)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -154,8 +175,8 @@ struct IconPickerView: View {
         .overlay {
             RoundedRectangle(cornerRadius: LSpacing.inputRadius)
                 .strokeBorder(
-                    isSelected ? LColors.glassBorderStrong : LColors.glassBorder,
-                    lineWidth: isSelected ? 1.5 : 1
+                    iconBorderColor ?? (isSelected ? LColors.glassBorderStrong : LColors.glassBorder),
+                    lineWidth: iconBorderWidth ?? (isSelected ? 1.5 : 1)
                 )
         }
         .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)

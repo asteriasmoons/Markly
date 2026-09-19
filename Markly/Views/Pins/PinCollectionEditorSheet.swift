@@ -35,7 +35,12 @@ struct PinCollectionEditorSheet: View {
                     collectionEditorSection(title: "Choose Icon", accent: collectionEditorAccent(at: 1)) {
                         selectedIconPreview
 
-                        IconPickerView(selectedIcon: $selectedIcon)
+                        IconPickerView(
+                            selectedIcon: $selectedIcon,
+                            iconBorderColor: LColors.secondaryAccent,
+                            iconBorderWidth: 1.5,
+                            glassDropdown: true
+                        )
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 420)
                     }
@@ -126,19 +131,14 @@ private extension PinCollectionEditorSheet {
         accent: Color,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text(title)
-                    .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(accent)
+        VStack(alignment: .leading, spacing: 14) {
+            Text(title)
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundStyle(accent)
 
-                content()
-            }
+            content()
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(accent, lineWidth: 1.2)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func collectionEditorAccent(at index: Int) -> Color {

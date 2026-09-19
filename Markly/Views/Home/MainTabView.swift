@@ -9,17 +9,20 @@ import SwiftData
 enum MarklyTab: CaseIterable {
     case library
     case pins
+    case dictionary
     case activity
     case settings
 
     static let primaryTabs: [MarklyTab] = [
         .library,
         .pins,
-        .activity,
+        .dictionary,
         .settings
     ]
 
-    static let overflowTabs: [MarklyTab] = []
+    static let overflowTabs: [MarklyTab] = [
+        .activity
+    ]
 
     var icon: String {
         switch self {
@@ -28,6 +31,9 @@ enum MarklyTab: CaseIterable {
 
         case .pins:
             return "pinfill"
+
+        case .dictionary:
+            return "dictionary"
 
         case .activity:
             return "sparkbolt"
@@ -45,6 +51,9 @@ enum MarklyTab: CaseIterable {
         case .pins:
             return "Pins"
 
+        case .dictionary:
+            return "Dictionary"
+
         case .activity:
             return "Activity"
 
@@ -60,6 +69,9 @@ enum MarklyTab: CaseIterable {
 
         case .pins:
             return "Browse your saved collections and pinned bookmarks."
+
+        case .dictionary:
+            return "Build your personal word reference."
 
         case .activity:
             return "See recent saves, imports, exports, and updates."
@@ -95,6 +107,13 @@ struct MainTabView: View {
                 appState.setSignedIn(savedUser)
             }
         }
+        .onChange(of: appState.pendingReportConversationID) { _, newValue in
+            if newValue != nil {
+                withAnimation(.spring(duration: 0.3, bounce: 0.2)) {
+                    selectedTab = .settings
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -108,6 +127,11 @@ struct MainTabView: View {
         case .pins:
             NavigationStack {
                 PinsView()
+            }
+
+        case .dictionary:
+            NavigationStack {
+                DictionaryView()
             }
 
         case .activity:

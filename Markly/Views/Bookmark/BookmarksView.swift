@@ -187,35 +187,29 @@ private extension BookmarksView {
     }
 
     var searchSection: some View {
-        GlassCard {
-            HStack(spacing: 10) {
-                Image("searchsparkle")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(.white.opacity(0.45))
+        HStack(spacing: 10) {
+            Image("searchsparkle")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .foregroundStyle(LColors.primaryActions)
 
-                TextField("Search folders", text: $searchText)
-                    .foregroundStyle(LColors.textPrimary)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .fill(Color.white.opacity(0.035))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .strokeBorder(LColors.primaryActions, lineWidth: 1)
-            )
+            TextField("Search folders", text: $searchText)
+                .foregroundStyle(LColors.textPrimary)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(LColors.primaryActions, lineWidth: 1.2)
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .strokeBorder(LColors.primaryActions, lineWidth: 1)
         )
         .padding(.horizontal, LSpacing.pageHorizontal)
         .onChange(of: searchText) { _, _ in

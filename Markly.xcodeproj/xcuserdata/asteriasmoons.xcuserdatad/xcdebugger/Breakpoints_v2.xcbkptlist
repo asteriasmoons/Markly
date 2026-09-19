@@ -8,7 +8,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "DB389308-105B-4D5C-8ED3-7FEA9D99CF05"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../../../../var/folders/13/h07dr5n51ns9fc_dzc5rv5l00000gn/T/swift-generated-sources/@__swiftmacro_6Markly14BookmarkFolder5ModelfMm_.swift"
@@ -18,36 +18,6 @@
             endingLineNumber = "1"
             landmarkName = "unknown"
             landmarkType = "0">
-            <Locations>
-               <Location
-                  uuid = "DB389308-105B-4D5C-8ED3-7FEA9D99CF05 - 4a69b7dc9f06facf"
-                  shouldBeEnabled = "No"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "Markly.BookmarkFolder.init(name: Swift.String, systemKey: Swift.String, iconName: Swift.String, sortOrder: Swift.Int, createdAt: Foundation.Date, updatedAt: Foundation.Date) -&gt; Markly.BookmarkFolder"
-                  moduleName = "Markly.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/asteriasmoons/Desktop/Markly/@__swiftmacro_6Markly14BookmarkFolder5ModelfMm_.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "2"
-                  endingLineNumber = "2">
-               </Location>
-               <Location
-                  uuid = "DB389308-105B-4D5C-8ED3-7FEA9D99CF05 - 6019fd58ab824399"
-                  shouldBeEnabled = "No"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "Markly.BookmarkFolder.init(backingData: any SwiftData.BackingData&lt;Self.SwiftData.BackingData.Model == Markly.BookmarkFolder&gt;) -&gt; Markly.BookmarkFolder"
-                  moduleName = "Markly.debug.dylib"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/asteriasmoons/Desktop/Markly/@__swiftmacro_6Markly14BookmarkFolder5ModelfMm_.swift"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "2"
-                  endingLineNumber = "2">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

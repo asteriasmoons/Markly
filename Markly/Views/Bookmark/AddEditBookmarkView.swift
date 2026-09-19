@@ -2,8 +2,6 @@
 //  AddEditBookmarkView.swift
 //  Markly
 //
-//  Created by Asteria Moon on 3/19/26.
-//
 
 import SwiftUI
 import SwiftData
@@ -202,19 +200,14 @@ private extension AddEditBookmarkView {
         accent: Color,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(title)
-                    .font(.system(size: 18, weight: .black, design: .rounded))
-                    .foregroundStyle(accent)
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundStyle(accent)
 
-                content()
-            }
+            content()
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(accent, lineWidth: 1.2)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func folderPicker(accent: Color) -> some View {

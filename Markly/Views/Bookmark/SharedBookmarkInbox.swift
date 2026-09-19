@@ -1,6 +1,6 @@
 //
 //  SharedBookmarkInbox.swift
-//  Lystaria
+//  Markly
 //
 
 import Foundation

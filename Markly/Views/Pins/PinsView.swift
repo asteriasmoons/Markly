@@ -88,7 +88,7 @@ private extension PinsView {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 30, height: 30)
-                    .foregroundStyle(LColors.indicators)
+                    .foregroundStyle(LColors.secondaryAccent)
             }
             .buttonStyle(.plain)
         }
@@ -98,20 +98,17 @@ private extension PinsView {
     var collectionsSection: some View {
         VStack(alignment: .leading, spacing: 18) {
             if sortedCollections.isEmpty {
-                GlassCard {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack(alignment: .center) {
-                            sectionHeader(title: "Collections", icon: "pinfill")
-                            Spacer()
-                        }
-
-                        Text("Create pin collections for your most-used bookmark groups.")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(LColors.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .center) {
+                        sectionHeader(title: "Collections", icon: "pinfill", iconTint: LColors.primaryActions)
+                        Spacer()
                     }
+
+                    Text("Create pin collections for your most-used bookmark groups.")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(LColors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .pinsBoxBorder(pinsBoxAccent(at: 0))
             } else {
                 ForEach(Array(collectionGroups.enumerated()), id: \.offset) { index, group in
                     collectionGroupCard(group, index: index)
@@ -120,82 +117,77 @@ private extension PinsView {
         }
     }
     func collectionGroupCard(_ collections: [PinCollection], index: Int) -> some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center) {
-                    sectionHeader(
-                        title: index == 0 ? "Collections" : "Collections \(index + 1)",
-                        icon: "pinfill"
-                    )
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center) {
+                sectionHeader(
+                    title: index == 0 ? "Collections" : "Collections \(index + 1)",
+                    icon: "pinfill",
+                    iconTint: LColors.primaryActions
+                )
 
-                    Spacer()
-                }
+                Spacer()
+            }
 
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 12),
-                        GridItem(.flexible(), spacing: 12)
-                    ],
-                    spacing: 12
-                ) {
-                    ForEach(Array(collections.enumerated()), id: \.element.id) { collectionIndex, collection in
-                        Button {
-                            selectedCollection = collection
-                        } label: {
-                            collectionCard(
-                                collection,
-                                index: index * 4 + collectionIndex
-                            )
-                        }
-                        .buttonStyle(.plain)
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12)
+                ],
+                spacing: 12
+            ) {
+                ForEach(Array(collections.enumerated()), id: \.element.id) { collectionIndex, collection in
+                    Button {
+                        selectedCollection = collection
+                    } label: {
+                        collectionCard(
+                            collection,
+                            index: index * 4 + collectionIndex
+                        )
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
-        .pinsBoxBorder(pinsBoxAccent(at: index))
     }
 
     var searchCard: some View {
-        GlassCard {
-            HStack(spacing: 10) {
-                Image("searchsparkle")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(LColors.secondaryAccent)
+        HStack(spacing: 10) {
+            Image("searchsparkle")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .foregroundStyle(LColors.secondaryAccent)
 
-                TextField("Search pinned bookmarks", text: $searchText)
-                    .foregroundStyle(LColors.textPrimary)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .tint(LColors.secondaryAccent)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 11)
-            .background(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .fill(Color.white.opacity(0.035))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
-                    .strokeBorder(LColors.secondaryAccent, lineWidth: 1.2)
-            )
+            TextField("Search pinned bookmarks", text: $searchText)
+                .foregroundStyle(LColors.textPrimary)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .tint(LColors.secondaryAccent)
         }
-        .pinsBoxBorder(LColors.secondaryAccent)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .background(
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .fill(Color.white.opacity(0.035))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: LSpacing.inputRadius, style: .continuous)
+                .strokeBorder(LColors.secondaryAccent, lineWidth: 1.2)
+        )
     }
 
     var pinsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center) {
-                sectionHeader(title: "All Pins", icon: "starmark")
+                sectionHeader(title: "All Pins", icon: "starmark", iconTint: LColors.indicators)
 
                 Spacer()
 
                 Text("\(filteredPins.count)")
                     .font(.system(size: 13, weight: .black, design: .rounded))
-                    .foregroundStyle(LColors.textSecondary)
+                    .foregroundStyle(LColors.indicators)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
                     .background(Color.white.opacity(0.07), in: Capsule())
@@ -222,12 +214,14 @@ private extension PinsView {
     var emptyStateCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
-                Image("starmark")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
+                BubblyIconMaterial(tint: LColors.indicators)
+                    .mask {
+                        Image("starmark")
+                            .resizable()
+                            .scaledToFit()
+                    }
                     .frame(width: 30, height: 30)
-                    .foregroundStyle(LColors.indicators)
+                    .accessibilityHidden(true)
 
                 Text(pinnedBookmarks.isEmpty ? "No pins yet" : "No matching pins")
                     .font(.system(size: 20, weight: .black, design: .rounded))
@@ -388,14 +382,14 @@ private extension PinsView {
         }
     }
 
-    func sectionHeader(title: String, icon: String) -> some View {
+    func sectionHeader(title: String, icon: String, iconTint: Color = LColors.secondaryAccent) -> some View {
         HStack(spacing: 8) {
             Image(icon)
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(width: icon == "pinfill" ? 21 : 17, height: icon == "pinfill" ? 21 : 17)
-                .foregroundStyle(LColors.secondaryAccent)
+                .foregroundStyle(iconTint)
 
             Text(title)
                 .font(.system(size: 18, weight: .black, design: .rounded))

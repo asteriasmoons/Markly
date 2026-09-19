@@ -49,6 +49,15 @@ final class SubmittedReport: Identifiable {
     var additionalNotes: String = ""
     var status: String = "Submitted"
     var submittedAt: Date = Date()
+    var conversationRecordName: String = ""
+    var conversationZoneName: String = ""
+    var conversationZoneOwnerName: String = ""
+    var conversationShareURL: String = ""
+    var conversationStateRawValue: String = "notStarted"
+    var conversationUpdatedAt: Date?
+    var conversationLastMessageAt: Date?
+    var conversationUnreadCount: Int = 0
+    var conversationLastReadAt: Date?
 
     @Relationship(deleteRule: .cascade, inverse: \SubmittedReportAttachment.report)
     private var storedAttachments: [SubmittedReportAttachment]?
@@ -105,6 +114,15 @@ final class SubmittedReport: Identifiable {
         additionalNotes: String,
         status: String = "Submitted",
         submittedAt: Date = Date(),
+        conversationRecordName: String = "",
+        conversationZoneName: String = "",
+        conversationZoneOwnerName: String = "",
+        conversationShareURL: String = "",
+        conversationState: MarklyReportConversationState = .notStarted,
+        conversationUpdatedAt: Date? = nil,
+        conversationLastMessageAt: Date? = nil,
+        conversationUnreadCount: Int = 0,
+        conversationLastReadAt: Date? = nil,
         attachments: [SubmittedReportAttachment] = []
     ) {
         self.id = id
@@ -148,10 +166,24 @@ final class SubmittedReport: Identifiable {
         self.additionalNotes = additionalNotes
         self.status = status
         self.submittedAt = submittedAt
+        self.conversationRecordName = conversationRecordName
+        self.conversationZoneName = conversationZoneName
+        self.conversationZoneOwnerName = conversationZoneOwnerName
+        self.conversationShareURL = conversationShareURL
+        self.conversationStateRawValue = conversationState.rawValue
+        self.conversationUpdatedAt = conversationUpdatedAt
+        self.conversationLastMessageAt = conversationLastMessageAt
+        self.conversationUnreadCount = conversationUnreadCount
+        self.conversationLastReadAt = conversationLastReadAt
         self.storedAttachments = attachments
 
         for attachment in attachments {
             attachment.report = self
         }
+    }
+
+    var conversationState: MarklyReportConversationState {
+        get { MarklyReportConversationState(rawValue: conversationStateRawValue) ?? .notStarted }
+        set { conversationStateRawValue = newValue.rawValue }
     }
 }

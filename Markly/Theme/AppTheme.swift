@@ -7,31 +7,6 @@
 //  to it here. No aliases, no derived colors, no opacity-reduced draws,
 //  no gradients.
 //
-//    background        #101322   page backdrop
-//    surface           #191D30   cards, text fields, unselected chips,
-//                                 toggle pill body
-//    raisedSurface     #222842   drum-picker container, tab bar,
-//                                 toggle thumb OFF, stepper buttons,
-//                                 chevron buttons, hairline borders
-//    primaryAction     #6F91F2   primary buttons, selected chip/bubble
-//                                 fill, toggle thumb ON, section-header
-//                                 icons, autopay chip, "Paid" status
-//                                 label, TODAY divider, category
-//                                 rotation slot 1, tab bar selected
-//                                 pill, TIMELINE month card
-//    secondaryAccent   #F18BB5   Secondary/attention accent: "Due Soon"
-//                                 summary tile, "Cancel Bill" button,
-//                                 "Failed" status label, "Variable"
-//                                 chip, category rotation slot 2
-//    indicators        #F4D978   status/indicators: "Remaining" summary
-//                                 tile, "Due"/"Late" status label,
-//                                 activity dot on day bubbles, category
-//                                 rotation slot 3
-//    textPrimary       #F7F7FA   all primary/body/title text and the
-//                                 icon glyph inside a filled thumb
-//    textSecondary     #AEB3C3   captions, subtitles, un-selected
-//                                 labels, muted icons
-//
 
 import SwiftUI
 

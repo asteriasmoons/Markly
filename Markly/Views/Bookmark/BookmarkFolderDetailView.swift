@@ -286,12 +286,14 @@ private extension BookmarkFolderDetailView {
     var emptyStateCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 10) {
-                Image("starmark")
-                    .renderingMode(.template)
-                    .resizable()
-                    .scaledToFit()
+                BubblyIconMaterial(tint: LColors.secondaryAccent)
+                    .mask {
+                        Image("starmark")
+                            .resizable()
+                            .scaledToFit()
+                    }
                     .frame(width: 28, height: 28)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .accessibilityHidden(true)
 
                 Text(emptyStateTitle)
                     .font(.headline)

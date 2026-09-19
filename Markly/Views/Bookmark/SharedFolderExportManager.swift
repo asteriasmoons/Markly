@@ -1,8 +1,6 @@
 //
 //  SharedFolderExportManager.swift
-//  Lystaria
-//
-//  Created by Asteria Moon on 3/19/26.
+//  Markly
 //
 
 import Foundation

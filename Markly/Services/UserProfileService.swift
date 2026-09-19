@@ -1,7 +1,7 @@
 //
 //  UserProfileService.swift
 //  Markly
-// USES THE SAME API AS ALL OTHER APPS WHICH IS LYSTARIA
+// USES THE SAME API AS ALL OTHER APPS WHICH IS VOXIVERSE
 //
 
 import Foundation
@@ -13,7 +13,7 @@ final class UserProfileService {
     private let baseURL: String = {
         guard let url = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String,
               !url.isEmpty else {
-            return "https://lystaria-api.fly.dev"
+            return "https://appapi.voxiverse.ink"
         }
         return url
     }()

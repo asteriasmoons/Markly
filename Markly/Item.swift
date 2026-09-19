@@ -2,8 +2,6 @@
 //  Item.swift
 //  Markly
 //
-//  Created by Asteria Moon on 6/7/26.
-//
 
 import Foundation
 import SwiftData

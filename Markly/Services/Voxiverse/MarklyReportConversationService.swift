@@ -13,10 +13,20 @@ final class MarklyReportConversationService: ObservableObject {
     @Published private(set) var snapshot: MarklyReportConversationSnapshot?
     @Published private(set) var isLoading = false
     @Published private(set) var isSending = false
+    @Published private(set) var localOutgoingMessages: [MarklyReportConversationMessage] = []
     @Published private(set) var isUpdatingInvitation = false
     @Published var errorMessage: String?
 
     private let container: CKContainer
+    private var pendingPayloads: [String: PendingOutgoingPayload] = [:]
+    private var activeMessageIDs: Set<String> = []
+
+    private struct PendingOutgoingPayload: Codable {
+        let text: String
+        let attachments: [MarklyConversationAttachment]
+        let createdAt: Date
+        let conversationID: String
+    }
 
     init(container: CKContainer = CKContainer(identifier: MarklyReportConversationCloudKitSchema.containerIdentifier)) {
         self.container = container
@@ -25,11 +35,13 @@ final class MarklyReportConversationService: ObservableObject {
     func load(report: SubmittedReport, modelContext: ModelContext, markRead: Bool = false) async {
         isLoading = true
         errorMessage = nil
+        restorePendingPayloads(for: report.reportID)
         do {
             let loaded = try await fetchSnapshot(for: report, modelContext: modelContext, markRead: markRead)
             snapshot = loaded
+            reconcileLocalMessages(with: loaded)
         } catch {
-            snapshot = cachedSnapshot(for: report)
+            snapshot = snapshot ?? cachedSnapshot(for: report)
             errorMessage = error.localizedDescription
         }
         isLoading = false
@@ -81,36 +93,117 @@ final class MarklyReportConversationService: ObservableObject {
         isUpdatingInvitation = false
     }
 
-    func sendReporterMessage(_ rawText: String, report: SubmittedReport, modelContext: ModelContext) async {
+    func sendReporterMessage(
+        _ rawText: String,
+        attachments: [MarklyConversationAttachment] = [],
+        report: SubmittedReport,
+        modelContext: ModelContext
+    ) -> Bool {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        guard !isSending else { return }
+        guard !text.isEmpty || !attachments.isEmpty else { return false }
+        guard let current = snapshot, current.state == .accepted, current.acceptsReplies else { return false }
 
-        isSending = true
+        let messageID = UUID().uuidString
+        let now = Date()
+        pendingPayloads[messageID] = PendingOutgoingPayload(text: text, attachments: attachments, createdAt: now, conversationID: report.reportID)
+        localOutgoingMessages.append(MarklyReportConversationMessage(
+            id: messageID,
+            senderRole: .reporter,
+            body: text,
+            createdAt: now,
+            creatorRecordName: "",
+            attachments: attachments,
+            deliveryState: .sending
+        ))
+        updateSendingState()
         errorMessage = nil
+        Task { await processOutgoingMessage(messageID, report: report, modelContext: modelContext) }
+        return true
+    }
+
+    func retryReporterMessage(_ messageID: String, report: SubmittedReport, modelContext: ModelContext) {
+        guard pendingPayloads[messageID] != nil,
+              let index = localOutgoingMessages.firstIndex(where: { $0.id == messageID }),
+              localOutgoingMessages[index].deliveryState == .failed,
+              snapshot?.state == .accepted,
+              snapshot?.acceptsReplies == true else { return }
+        localOutgoingMessages[index].deliveryState = .sending
+        updateSendingState()
+        Task { await processOutgoingMessage(messageID, report: report, modelContext: modelContext) }
+    }
+
+    var displayedMessages: [MarklyReportConversationMessage] {
+        let remote = snapshot?.messages ?? []
+        let remoteIDs = Set(remote.map(\.id))
+        return (remote + localOutgoingMessages.filter { !remoteIDs.contains($0.id) })
+            .sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func processOutgoingMessage(_ messageID: String, report: SubmittedReport, modelContext: ModelContext) async {
+        guard !activeMessageIDs.contains(messageID), let payload = pendingPayloads[messageID] else { return }
+        activeMessageIDs.insert(messageID)
+        defer {
+            activeMessageIDs.remove(messageID)
+            updateSendingState()
+        }
+
+        var finalError: Error?
         do {
+            try persistPendingPayload(payload, messageID: messageID)
+        } catch {
+            setDeliveryState(.failed, for: messageID)
+            errorMessage = error.localizedDescription
+            return
+        }
+        for attempt in 0..<3 {
+            do {
+                try await persistReporterMessage(messageID: messageID, payload: payload, report: report, modelContext: modelContext)
+                setDeliveryState(.sent, for: messageID)
+                pendingPayloads.removeValue(forKey: messageID)
+                removePersistedPayload(messageID: messageID)
+                if let refreshed = try? await fetchSnapshot(for: report, modelContext: modelContext, markRead: true) {
+                    snapshot = refreshed
+                    reconcileLocalMessages(with: refreshed)
+                }
+                return
+            } catch {
+                finalError = error
+                if attempt < 2 { try? await Task.sleep(for: .milliseconds(180)) }
+            }
+        }
+        setDeliveryState(.failed, for: messageID)
+        errorMessage = finalError?.localizedDescription
+    }
+
+    private func persistReporterMessage(
+        messageID: String,
+        payload: PendingOutgoingPayload,
+        report: SubmittedReport,
+        modelContext: ModelContext
+    ) async throws {
             let current = try await currentSnapshot(for: report, modelContext: modelContext)
             guard current.state == .accepted else { throw ConversationError.notAccepted }
             guard let recordID = current.recordID else { throw ConversationError.missingSharedConversation }
 
             let database = conversationDatabase(for: recordID)
             let root = try await fetchRecord(recordID, in: database)
-            guard MarklyReportConversationState(rawValue: root.marklyString(MarklyReportConversationCloudKitSchema.ConversationField.invitationState)) == .accepted else {
-                throw ConversationError.notAccepted
-            }
+            guard MarklyReportConversationState(rawValue: root.marklyString(MarklyReportConversationCloudKitSchema.ConversationField.invitationState)) == .accepted else { throw ConversationError.notAccepted }
+            guard (root[MarklyReportConversationCloudKitSchema.ConversationField.acceptsReplies] as? NSNumber)?.boolValue ?? true else { throw ConversationError.readOnly }
 
-            let now = Date()
-            let messageID = UUID().uuidString
+            let now = payload.createdAt
             let messageRecordID = CKRecord.ID(recordName: "message-\(messageID)", zoneID: root.recordID.zoneID)
+            if (try? await database.record(for: messageRecordID)) != nil { return }
             let message = CKRecord(recordType: MarklyReportConversationCloudKitSchema.RecordType.message, recordID: messageRecordID)
             message.parent = CKRecord.Reference(recordID: root.recordID, action: .none)
             message[MarklyReportConversationCloudKitSchema.MessageField.messageID] = messageID as CKRecordValue
             message[MarklyReportConversationCloudKitSchema.MessageField.conversation] = CKRecord.Reference(recordID: root.recordID, action: .none)
             message[MarklyReportConversationCloudKitSchema.MessageField.conversationRecordName] = root.recordID.recordName as CKRecordValue
             message[MarklyReportConversationCloudKitSchema.MessageField.senderRole] = MarklyReportConversationSenderRole.reporter.rawValue as CKRecordValue
-            message[MarklyReportConversationCloudKitSchema.MessageField.body] = text as CKRecordValue
+            message[MarklyReportConversationCloudKitSchema.MessageField.body] = payload.text as CKRecordValue
             message[MarklyReportConversationCloudKitSchema.MessageField.createdAt] = now as CKRecordValue
             message[MarklyReportConversationCloudKitSchema.MessageField.clientMessageID] = messageID as CKRecordValue
+            let temporaryFiles = try writeAttachments(payload.attachments, to: message)
+            defer { temporaryFiles.forEach { try? FileManager.default.removeItem(at: $0) } }
 
             var names = root[MarklyReportConversationCloudKitSchema.ConversationField.messageRecordNames] as? [String] ?? []
             if !names.contains(messageRecordID.recordName) {
@@ -122,13 +215,105 @@ final class MarklyReportConversationService: ObservableObject {
             root[MarklyReportConversationCloudKitSchema.ConversationField.updatedAt] = now as CKRecordValue
             root[MarklyReportConversationCloudKitSchema.ConversationField.staffUnreadCount] = (root.marklyInt(MarklyReportConversationCloudKitSchema.ConversationField.staffUnreadCount) + 1) as CKRecordValue
 
-            _ = try await database.modifyRecords(saving: [root, message], deleting: [], savePolicy: .changedKeys, atomically: true)
+            let saveResult = try await database.modifyRecords(saving: [root, message], deleting: [], savePolicy: .changedKeys, atomically: true)
+            for recordID in [root.recordID, message.recordID] {
+                guard let result = saveResult.saveResults[recordID] else { throw ConversationError.recordNotFound }
+                _ = try result.get()
+            }
             try? await updatePublicReportConversationLastActivity(for: report, state: .accepted, timestamp: now)
-            snapshot = try await fetchSnapshot(for: report, modelContext: modelContext, markRead: true)
-        } catch {
-            errorMessage = error.localizedDescription
+    }
+
+    private func setDeliveryState(_ state: MarklyReportConversationDeliveryState, for messageID: String) {
+        guard let index = localOutgoingMessages.firstIndex(where: { $0.id == messageID }) else { return }
+        localOutgoingMessages[index].deliveryState = state
+    }
+
+    private func reconcileLocalMessages(with snapshot: MarklyReportConversationSnapshot) {
+        let remoteIDs = Set(snapshot.messages.map(\.id))
+        for messageID in remoteIDs where pendingPayloads[messageID] != nil {
+            pendingPayloads.removeValue(forKey: messageID)
+            removePersistedPayload(messageID: messageID)
         }
-        isSending = false
+        localOutgoingMessages.removeAll { remoteIDs.contains($0.id) }
+    }
+
+    private func restorePendingPayloads(for conversationID: String) {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: outboxDirectory,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        let decoder = PropertyListDecoder()
+        for url in urls where url.pathExtension == "plist" {
+            guard let data = try? Data(contentsOf: url),
+                  let payload = try? decoder.decode(PendingOutgoingPayload.self, from: data),
+                  payload.conversationID == conversationID else { continue }
+            let messageID = url.deletingPathExtension().lastPathComponent
+            guard pendingPayloads[messageID] == nil else { continue }
+            pendingPayloads[messageID] = payload
+            localOutgoingMessages.append(MarklyReportConversationMessage(
+                id: messageID,
+                senderRole: .reporter,
+                body: payload.text,
+                createdAt: payload.createdAt,
+                creatorRecordName: "",
+                attachments: payload.attachments,
+                deliveryState: .failed
+            ))
+        }
+    }
+
+    private var outboxDirectory: URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let directory = base.appendingPathComponent("MarklyReportConversationOutbox", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private func persistPendingPayload(_ payload: PendingOutgoingPayload, messageID: String) throws {
+        let data = try PropertyListEncoder().encode(payload)
+        try data.write(to: outboxDirectory.appendingPathComponent("\(messageID).plist"), options: .atomic)
+    }
+
+    private func removePersistedPayload(messageID: String) {
+        try? FileManager.default.removeItem(at: outboxDirectory.appendingPathComponent("\(messageID).plist"))
+    }
+
+    private func updateSendingState() {
+        isSending = localOutgoingMessages.contains { $0.deliveryState == .sending }
+    }
+
+    private func writeAttachments(_ attachments: [MarklyConversationAttachment], to record: CKRecord) throws -> [URL] {
+        var urls: [URL] = []
+        do {
+            for (offset, attachment) in attachments.prefix(3).enumerated() {
+                let index = offset + 1
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                try attachment.data.write(to: url, options: .atomic)
+                urls.append(url)
+                record[MarklyReportConversationCloudKitSchema.MessageField.attachment(index)] = CKAsset(fileURL: url)
+                record[MarklyReportConversationCloudKitSchema.MessageField.attachmentName(index)] = attachment.name as CKRecordValue
+                record[MarklyReportConversationCloudKitSchema.MessageField.attachmentType(index)] = attachment.typeIdentifier as CKRecordValue
+            }
+            record[MarklyReportConversationCloudKitSchema.MessageField.attachmentCount] = urls.count as CKRecordValue
+            return urls
+        } catch {
+            urls.forEach { try? FileManager.default.removeItem(at: $0) }
+            throw error
+        }
+    }
+
+    private func readAttachments(from record: CKRecord) -> [MarklyConversationAttachment] {
+        (0..<min(3, record.marklyInt(MarklyReportConversationCloudKitSchema.MessageField.attachmentCount))).compactMap { offset in
+            let index = offset + 1
+            guard let url = (record[MarklyReportConversationCloudKitSchema.MessageField.attachment(index)] as? CKAsset)?.fileURL,
+                  let data = try? Data(contentsOf: url) else { return nil }
+            return MarklyConversationAttachment(
+                name: record.marklyString(MarklyReportConversationCloudKitSchema.MessageField.attachmentName(index), fallback: "Attachment \(index)"),
+                typeIdentifier: record.marklyString(MarklyReportConversationCloudKitSchema.MessageField.attachmentType(index), fallback: "public.data"),
+                data: data
+            )
+        }
     }
 
     func fetchSummary(for report: SubmittedReport, modelContext: ModelContext) async -> MarklyReportConversationSnapshot {
@@ -180,16 +365,13 @@ final class MarklyReportConversationService: ObservableObject {
         let messages = try await fetchMessages(from: root, in: database)
         let snapshot = makeSnapshot(from: root, shareURL: shareURL, messages: messages, fallbackReport: report)
         applySnapshot(snapshot, to: report, modelContext: modelContext)
+        if markRead {
+            await MarklyReportConversationNotificationManager.clearReadConversationNotification(reportID: report.reportID)
+        }
         try await MarklyReportConversationNotificationManager.registerSharedConversationNotifications(
             database: database,
-            zoneID: root.recordID.zoneID
+            conversationRecordID: root.recordID
         )
-        if snapshot.state == .invited {
-            await MarklyReportConversationNotificationManager.notifyInvitationDiscovered(
-                reportID: report.reportID,
-                reportTitle: report.title
-            )
-        }
         return snapshot
     }
 
@@ -273,6 +455,7 @@ final class MarklyReportConversationService: ObservableObject {
             reportType: report.reportType,
             reportTitle: report.title,
             state: report.conversationState,
+            acceptsReplies: true,
             recordID: recordID,
             shareURL: URL(string: report.conversationShareURL),
             createdAt: report.submittedAt,
@@ -403,7 +586,8 @@ final class MarklyReportConversationService: ObservableObject {
                 senderRole: MarklyReportConversationSenderRole(rawValue: record.marklyString(MarklyReportConversationCloudKitSchema.MessageField.senderRole)) ?? .unknown,
                 body: record.marklyString(MarklyReportConversationCloudKitSchema.MessageField.body),
                 createdAt: record.marklyDate(MarklyReportConversationCloudKitSchema.MessageField.createdAt) ?? record.creationDate ?? Date(),
-                creatorRecordName: record.creatorUserRecordID?.recordName ?? ""
+                creatorRecordName: record.creatorUserRecordID?.recordName ?? "",
+                attachments: readAttachments(from: record)
             )
         }
         .sorted { $0.createdAt < $1.createdAt }
@@ -422,6 +606,7 @@ final class MarklyReportConversationService: ObservableObject {
             reportType: root.marklyString(MarklyReportConversationCloudKitSchema.ConversationField.reportType, fallback: fallbackReport.reportType),
             reportTitle: root.marklyString(MarklyReportConversationCloudKitSchema.ConversationField.reportTitle, fallback: fallbackReport.title),
             state: MarklyReportConversationState(rawValue: root.marklyString(MarklyReportConversationCloudKitSchema.ConversationField.invitationState)) ?? .notStarted,
+            acceptsReplies: (root[MarklyReportConversationCloudKitSchema.ConversationField.acceptsReplies] as? NSNumber)?.boolValue ?? true,
             recordID: root.recordID,
             shareURL: shareURL,
             createdAt: root.marklyDate(MarklyReportConversationCloudKitSchema.ConversationField.createdAt) ?? root.creationDate,
@@ -442,6 +627,7 @@ final class MarklyReportConversationService: ObservableObject {
         case missingSharedConversation
         case recordNotFound
         case notAccepted
+        case readOnly
 
         var errorDescription: String? {
             switch self {
@@ -457,6 +643,8 @@ final class MarklyReportConversationService: ObservableObject {
                 return "The private conversation record could not be found."
             case .notAccepted:
                 return "Accept this invitation before sending a message."
+            case .readOnly:
+                return "This conversation is currently read only."
             }
         }
     }

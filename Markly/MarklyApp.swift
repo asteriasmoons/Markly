@@ -10,6 +10,7 @@ import SwiftData
 struct MarklyApp: App {
     @UIApplicationDelegateAdaptor(MarklyNotificationDelegate.self) private var notificationDelegate
     @StateObject private var appState = AppState()
+    @Environment(\.scenePhase) private var scenePhase
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -46,6 +47,10 @@ struct MarklyApp: App {
                 )) { notification in
                     guard let reportID = notification.object as? String else { return }
                     appState.handleReportConversationID(reportID)
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    Task { await MarklyReportConversationNotificationManager.scanForNewMessages() }
                 }
         }
         .modelContainer(sharedModelContainer)

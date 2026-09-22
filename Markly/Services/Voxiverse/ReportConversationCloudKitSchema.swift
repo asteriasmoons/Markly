@@ -19,15 +19,37 @@ enum MarklyReportConversationSenderRole: String, Codable, Hashable {
     case unknown
 }
 
+enum MarklyReportConversationDeliveryState: String, Codable, Hashable {
+    case sending
+    case sent
+    case failed
+}
+
 struct MarklyReportConversationMessage: Identifiable, Hashable {
     let id: String
     let senderRole: MarklyReportConversationSenderRole
     let body: String
     let createdAt: Date
     let creatorRecordName: String
+    let attachments: [MarklyConversationAttachment]
+    var deliveryState: MarklyReportConversationDeliveryState = .sent
 
     var isFromReporter: Bool {
         senderRole == .reporter
+    }
+}
+
+struct MarklyConversationAttachment: Identifiable, Hashable, Codable {
+    let id: UUID
+    let name: String
+    let typeIdentifier: String
+    let data: Data
+
+    init(id: UUID = UUID(), name: String, typeIdentifier: String, data: Data) {
+        self.id = id
+        self.name = name
+        self.typeIdentifier = typeIdentifier
+        self.data = data
     }
 }
 
@@ -38,6 +60,7 @@ struct MarklyReportConversationSnapshot: Identifiable, Hashable {
     let reportType: String
     let reportTitle: String
     let state: MarklyReportConversationState
+    let acceptsReplies: Bool
     let recordID: CKRecord.ID?
     let shareURL: URL?
     let createdAt: Date?
@@ -57,6 +80,7 @@ struct MarklyReportConversationSnapshot: Identifiable, Hashable {
             reportType: report.reportType,
             reportTitle: report.title,
             state: .notStarted,
+            acceptsReplies: true,
             recordID: nil,
             shareURL: nil,
             createdAt: nil,
@@ -94,6 +118,7 @@ enum MarklyReportConversationCloudKitSchema {
         static let reporterUserRecordName = "reporterUserRecordName"
         static let staffUserRecordName = "staffUserRecordName"
         static let invitationState = "invitationState"
+        static let acceptsReplies = "acceptsReplies"
         static let createdAt = "createdAt"
         static let updatedAt = "updatedAt"
         static let invitedAt = "invitedAt"
@@ -116,6 +141,10 @@ enum MarklyReportConversationCloudKitSchema {
         static let body = "body"
         static let createdAt = "createdAt"
         static let clientMessageID = "clientMessageID"
+        static let attachmentCount = "attachmentCount"
+        static func attachment(_ index: Int) -> String { "attachment\(index)" }
+        static func attachmentName(_ index: Int) -> String { "attachment\(index)Name" }
+        static func attachmentType(_ index: Int) -> String { "attachment\(index)Type" }
     }
 
     enum PublicReportField {

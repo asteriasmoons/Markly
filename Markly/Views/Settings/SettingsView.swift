@@ -208,7 +208,7 @@ private extension SettingsView {
 
                 settingsHeader(
                     title: "Support",
-                    icon: "loveletter",
+                    icon: "support",
                     accent: settingsAccent(at: 2)
                 )
 
@@ -228,7 +228,7 @@ private extension SettingsView {
                     showingFeatureRequest = true
                 } label: {
                     SettingsRow(
-                        icon: "searchsparkle",
+                        icon: "brightbulb",
                         title: "Request a Feature",
                         subtitle: "Suggest improvements for Markly.",
                         accent: settingsAccent(at: supportRowOffset + 1)
@@ -240,7 +240,7 @@ private extension SettingsView {
                     showingBetaFeedback = true
                 } label: {
                     SettingsRow(
-                        icon: "chatlines",
+                        icon: "chatstar",
                         title: "Beta Feedback",
                         subtitle: "Share what you tested and how it felt.",
                         accent: settingsAccent(at: supportRowOffset + 2)

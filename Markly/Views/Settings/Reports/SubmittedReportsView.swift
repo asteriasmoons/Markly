@@ -239,9 +239,11 @@ struct SubmittedReportsView: View {
     private func reportIconName(for report: SubmittedReport) -> String {
         switch report.reportType {
         case "Beta Feedback":
-            return "chatlines"
+            return "chatstar"
         case "Feature Request":
             return "brightbulb"
+        case "Bug Report":
+            return "bug"
         default:
             return "bug"
         }

@@ -26,6 +26,58 @@ final class DictionaryFetchService {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
+    /// Discovers a word in the chosen category and difficulty.
+    /// Passing recently displayed words helps avoid immediate repeats.
+    func fetchRandomWord(
+        category: DiscoveryCategory,
+        difficulty: DiscoveryDifficulty,
+        excluding recentWords: [String] = []
+    ) async throws -> FetchedWordDetails {
+        guard var components = URLComponents(string: "\(baseURL)/api/dictionary/random") else {
+            throw DictionaryFetchError.invalidResponse
+        }
+
+        let exclusions = Array(
+            recentWords
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+                .suffix(30)
+        )
+
+        var queryItems = [
+            URLQueryItem(name: "category", value: category.rawValue),
+            URLQueryItem(name: "difficulty", value: difficulty.rawValue)
+        ]
+        if !exclusions.isEmpty {
+            queryItems.append(URLQueryItem(name: "exclude", value: exclusions.joined(separator: ",")))
+        }
+        components.queryItems = queryItems
+
+        guard let url = components.url else {
+            throw DictionaryFetchError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 60
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw DictionaryFetchError.invalidResponse
+        }
+
+        if http.statusCode == 404 {
+            throw DictionaryFetchError.notFound
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            throw DictionaryFetchError.serverError
+        }
+
+        return try decoder.decode(FetchedWordDetails.self, from: data)
+    }
+
     func fetchDetails(for word: String) async throws -> FetchedWordDetails {
         let trimmed = word.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw DictionaryFetchError.emptyWord }

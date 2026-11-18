@@ -118,6 +118,15 @@ private extension DictionaryView {
 
             Spacer()
 
+            NavigationLink {
+                WordDiscoveryView()
+            } label: {
+                CustomAssetIcon(name: "letterkeys", size: 30, tint: LColors.primaryActions)
+                    .frame(width: 34, height: 34)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Word Discovery")
+
             Button {
                 showingAddDictionarySheet = true
             } label: {

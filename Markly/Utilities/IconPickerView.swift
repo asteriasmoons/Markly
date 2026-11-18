@@ -20,6 +20,8 @@ struct IconPickerView: View {
 
     private let maxVisibleCategoryRows = 5
     private let categoryRowHeight: CGFloat = 46
+    private let categoryRowSpacing: CGFloat = 4
+    private let categoryListPadding: CGFloat = 8
 
     private var selectedCategory: IconCategory {
         IconLibrary.pickerCategories.first { $0.name == selectedCategoryName }
@@ -98,7 +100,7 @@ struct IconPickerView: View {
 
             if isCategoryDropdownOpen {
                 ScrollView(.vertical, showsIndicators: IconLibrary.pickerCategories.count > maxVisibleCategoryRows) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: categoryRowSpacing) {
                         ForEach(IconLibrary.pickerCategories, id: \.name) { category in
                             Button {
                                 withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
@@ -134,10 +136,15 @@ struct IconPickerView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(8)
+                    .padding(categoryListPadding)
                 }
                 .frame(
-                    maxHeight: CGFloat(min(maxVisibleCategoryRows, IconLibrary.pickerCategories.count)) * categoryRowHeight + 16
+                    maxHeight: {
+                        let rows = min(maxVisibleCategoryRows, IconLibrary.pickerCategories.count)
+                        return CGFloat(rows) * categoryRowHeight
+                            + CGFloat(max(rows - 1, 0)) * categoryRowSpacing
+                            + categoryListPadding * 2
+                    }()
                 )
                 .background {
                     if glassDropdown {

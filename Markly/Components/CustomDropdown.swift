@@ -19,12 +19,13 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
     var accent: Color? = nil
     var maxVisibleRows: Int? = nil
     var showsDividers: Bool = true
+    var emphasizedStyle: Bool = false
     @Binding var selection: Option?
 
     @State private var isOpen = false
 
     private var rowHeight: CGFloat {
-        44
+        emphasizedStyle ? 52 : 44
     }
 
     private var dropdownHeight: CGFloat? {
@@ -52,8 +53,8 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
                                             tint: theme.palette.textPrimary)
                         }
                         Text(labelFor(option))
-                            .font(theme.typography.body)
-                            .foregroundStyle(theme.palette.textPrimary)
+                            .font(emphasizedStyle ? .system(size: 16, weight: .black, design: .rounded) : theme.typography.body)
+                            .foregroundStyle(emphasizedStyle ? LColors.primaryText : theme.palette.textPrimary)
                         Spacer(minLength: 0)
                         if selection == option {
                             CustomAssetIcon(name: "circlemarked", size: 14,
@@ -66,8 +67,8 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
                 .buttonStyle(.plain)
                 if showsDividers, option != options.last {
                     Rectangle()
-                        .fill(theme.palette.raisedSurface)
-                        .frame(height: 0.5)
+                        .fill(emphasizedStyle ? LColors.primaryText.opacity(0.85) : theme.palette.raisedSurface)
+                        .frame(height: emphasizedStyle ? 1 : 0.5)
                         .padding(.horizontal, theme.metrics.spacingL)
                 }
             }
@@ -77,7 +78,7 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: theme.metrics.spacingS) {
             Text(title)
-                .font(theme.typography.caption)
+                .font(emphasizedStyle ? .system(size: 18, weight: .black, design: .rounded) : theme.typography.caption)
                 .foregroundStyle(accent ?? theme.palette.textSecondary)
                 .textCase(.uppercase)
 
@@ -91,10 +92,10 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
                         CustomAssetIcon(name: assetName, size: 16, tint: theme.palette.textPrimary)
                     }
                     Text(selection.map(labelFor) ?? "Select…")
-                        .font(theme.typography.body)
-                        .foregroundStyle(selection == nil
+                        .font(emphasizedStyle ? .system(size: 17, weight: .black, design: .rounded) : theme.typography.body)
+                        .foregroundStyle(emphasizedStyle ? LColors.primaryText : (selection == nil
                                          ? theme.palette.textSecondary
-                                         : theme.palette.textPrimary)
+                                         : theme.palette.textPrimary))
                     Spacer(minLength: 0)
                     CustomAssetIcon(
                         name: isOpen ? "chevup" : "chevdown",
@@ -103,7 +104,7 @@ struct CustomDropdown<Option: Hashable & Identifiable>: View {
                     )
                 }
                 .padding(.horizontal, theme.metrics.spacingL)
-                .padding(.vertical, theme.metrics.spacingM)
+                .padding(.vertical, emphasizedStyle ? 20 : theme.metrics.spacingM)
                 .background {
                     let shape = RoundedRectangle(cornerRadius: theme.metrics.cornerChip,
                                                  style: .continuous)

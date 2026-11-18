@@ -51,7 +51,12 @@ struct BookmarksView: View {
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            repairDuplicateInboxesIfNeeded()
+            // Use a separate SwiftData actor so Inbox maintenance never blocks UI work.
+            let container = modelContext.container
+            Task.detached(priority: .utility) {
+                let worker = InboxRepairWorker(modelContainer: container)
+                await worker.repairIfNeeded()
+            }
             importPendingSharedBookmark()
         }
         .onAppear {
@@ -395,32 +400,7 @@ private extension BookmarksView {
         SharedBookmarkImportManager.importPendingBookmark(modelContext: modelContext)
     }
 
-    func repairDuplicateInboxesIfNeeded() {
-        let inboxes = folders.filter { $0.systemKey == "inbox" }
-        guard let canonicalInbox = inboxes.min(by: { $0.createdAt < $1.createdAt }) else { return }
 
-        canonicalInbox.name = "Inbox"
-        canonicalInbox.iconName = "inboxfill"
-        canonicalInbox.sortOrder = 0
-
-        let duplicates = inboxes.filter { $0.persistentModelID != canonicalInbox.persistentModelID }
-        for duplicate in duplicates {
-            for bookmark in bookmarks where bookmark.folder?.persistentModelID == duplicate.persistentModelID {
-                bookmark.folder = canonicalInbox
-                bookmark.updatedAt = Date()
-            }
-            modelContext.delete(duplicate)
-        }
-
-        canonicalInbox.updatedAt = Date()
-
-        do {
-            try modelContext.save()
-            SharedFolderExportManager.exportFolders(modelContext: modelContext)
-        } catch {
-            print("Failed to repair duplicate Inbox folders: \(error)")
-        }
-    }
 
     func moveFolder(with draggedID: PersistentIdentifier, before targetFolder: BookmarkFolder, in sourceFolders: [BookmarkFolder]) {
         guard let fromIndex = sourceFolders.firstIndex(where: { $0.persistentModelID == draggedID }),
